@@ -1,26 +1,26 @@
 # Lab 01 — Calculator, reconsidered
 
-> Working notes. Fill in the blanks *before* you code each part.
-> Update this file when a decision changes.
+> Working notes.
+> Update when a decision changes.
 
 ## Concept (1 sentence, your words)
 _ _ _
 
 ## Scope
 - In: two numbers (a, b) + one operator (+ − × ÷)
-- Out: chaining, brackets, memory (maybe chaining next week)
+- Out: chaining, brackets, memory (maybe chaining)
 
 ## Data (types)
-- `Operator` = which values? → _ _ _
-- `Calculation` = which fields? → _ _ _
-- `CalcResult` = which fields? → _ _ _
+- `Operator` = _ _ _
+- `Calculation` = _ _ _
+- `CalcResult` = _ _ _
 
 ## Rules
-- What counts as invalid input? List every case:
+- What counts as invalid input?
   1. _ _ _
   2. _ _ _
   3. _ _ _
-- Error message for each (short, human):
+- Error message:
   1. _ _ _
 
 ## States
