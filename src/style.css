@@ -1,0 +1,175 @@
+/* =========================================================
+   Lab starter — base styles
+   1. Fonts   2. Tokens   3. Reset   4. Base   5. Utilities
+   ========================================================= */
+
+/* 1. FONTS ------------------------------------------------
+   Files live in public/fonts/ (git-ignored: Dinamo's license
+   forbids putting them in public repos). If they're missing,
+   the fallback stack below takes over. */
+@font-face {
+  font-family: "ABC Areal";
+  src: url("/fonts/ABCAreal-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ABC Areal Mono";
+  src: url("/fonts/ABCArealMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 2. TOKENS ----------------------------------------------- */
+:root {
+  /* Type families */
+  --font-body: "ABC Areal", ui-sans-serif, system-ui, sans-serif;
+  --font-desc: "ABC Areal Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Type scale */
+  --text-desc: 0.8125rem; /* 13px — captions, labels, metadata */
+  --text-body: 1rem; /* 16px */
+  --text-large: 1.5rem; /* 24px */
+  --text-display: clamp(2.5rem, 8vw, 6rem); /* experiments, results */
+
+  --leading-tight: 1.1;
+  --leading-body: 1.45;
+  --tracking-desc: 0.02em;
+
+  /* Colour: base */
+  --color-bg: #ffffff;
+  --color-ink: #000000;
+
+  /* Colour: accents (R / G / B)
+     Note: pure red and green fail text contrast on white.
+     Use them for fills, shapes and data; use ink for text. */
+  --color-r: #ff0000;
+  --color-g: #00ff00;
+  --color-b: #0000ff;
+
+  /* Spacing (4px base) */
+  --space-1: 0.25rem; /*  4 */
+  --space-2: 0.5rem; /*  8 */
+  --space-3: 1rem; /* 16 */
+  --space-4: 1.5rem; /* 24 */
+  --space-5: 2.5rem; /* 40 */
+  --space-6: 4rem; /* 64 */
+
+  /* Layout */
+  --gutter: var(--space-3);
+  --max-width: 72rem;
+}
+
+/* 3. RESET ------------------------------------------------ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+img,
+picture,
+svg,
+canvas,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 4. BASE ------------------------------------------------- */
+body {
+  min-height: 100dvh;
+  padding: var(--gutter);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--font-desc);
+  font-size: var(--text-desc);
+}
+
+::selection {
+  background: var(--color-b);
+  color: var(--color-bg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-b);
+  outline-offset: 2px;
+}
+
+/* 5. UTILITIES -------------------------------------------- */
+.desc {
+  font-family: var(--font-desc);
+  font-size: var(--text-desc);
+  letter-spacing: var(--tracking-desc);
+  text-transform: uppercase;
+}
+
+.display {
+  font-size: var(--text-display);
+  line-height: var(--leading-tight);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
