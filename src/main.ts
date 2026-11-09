@@ -30,6 +30,89 @@ function validate(calc: Calculation): string | null {
   return null; // No validation errors
 }
 
+// 2.2 LOGIC - toOperator(), toSymbol()
+function toOperator(symbol: string): Operator | null {
+  switch (symbol) {
+    case "+":
+      return "+";
+    case "-":
+    case "−":
+      return "-";
+    case "*":
+    case "x":
+    case "X":
+    case "×":
+      return "*";
+    case "/":
+    case "÷":
+    case ":":
+      return "/";
+    default:
+      return null;
+  }
+}
+
+function toSymbol(op: Operator): string {
+  switch (op) {
+    case "+":
+      return "+";
+    case "-":
+      return "−";
+    case "*":
+      return "×";
+    case "/":
+      return "÷";
+    default:
+      const check: never = op;
+      throw new Error(`Unknown operator: ${check}`);
+  }
+}
+
+// 2.3 LOGIC - Tokenize expression into Calculation
+type Token =
+  | { kind: "number"; value: number }
+  | { kind: "operator"; value: Operator };
+
+function tokenize(input: string): Token[] | string {
+  const tokens: Token[] = [];
+  let i = 0;
+
+  while (i < input.length) {
+    const char = input[i];
+
+    // 1. space -> skip
+    if (char === " ") {
+      i++;
+      continue;
+    }
+
+    // 2. digit or "." -> collect the full number
+    if ("0123456789.".includes(char)) {
+      let numberText = "";
+      while (i < input.length && "0123456789.".includes(input[i])) {
+        numberText += input[i];
+        i++;
+      }
+      tokens.push({ kind: "number", value: Number(numberText) });
+      continue;
+    }
+
+    // 3. operator -> toOperator(char), push if not null, else return error
+    const op = toOperator(char);
+    if (op !== null) {
+      tokens.push({ kind: "operator", value: op });
+      i++;
+      continue;
+    }
+
+    // 4. unknown -> return error
+    return `Unknown character: ${char}`;
+  }
+  
+  return tokens;
+}
+
+
 // 3. LOGIC — calculate(calc): CalcResult
 function calculate(calc: Calculation): CalcResult {
   switch (calc.op) {
@@ -48,24 +131,14 @@ function calculate(calc: Calculation): CalcResult {
 }
 
 // 4. TESTS — console.log a few cases (delete later)
-console.log(validate({ valueOne: NaN, valueTwo: 5, op: "+" }));
-console.log(validate({ valueOne: 10, valueTwo: 0, op: "/" }));
-console.log(calculate({ valueOne: 10, valueTwo: 5, op: "/" })); // 2
-console.log(calculate({ valueOne: 6, valueTwo: 5, op: "+" })); // 11
-console.log(calculate({ valueOne: 6, valueTwo: 5, op: "-" })); // 1
-console.log(calculate({ valueOne: 6, valueTwo: 5, op: "*" })); // 30
 
 // 5. DOM — grab elements, null checks
-const valueOneInput = document.querySelector<HTMLInputElement>("#valueOne");
-const valueTwoInput = document.querySelector<HTMLInputElement>("#valueTwo");
-const operatorSelect = document.querySelector<HTMLSelectElement>("#operator");
+const expressionInput = document.querySelector<HTMLInputElement>("#expression");
 const resultOutput = document.querySelector<HTMLOutputElement>("#result");
 const errorParagraph = document.querySelector<HTMLParagraphElement>("#error");
 
 if (
-  !valueOneInput ||
-  !valueTwoInput ||
-  !operatorSelect ||
+  !expressionInput ||
   !resultOutput ||
   !errorParagraph
 ) {
@@ -74,21 +147,39 @@ if (
 
 // 6. DOM — on input: read → validate → calculate → show
 const update = (): void => {
-  // read (valueOneInput.value is always a string, even with type="number")
-  const valueOne = Number(valueOneInput.value);
-  const valueTwo = Number(valueTwoInput.value);
-  const op = operatorSelect.value as Operator;
+  const text = expressionInput.value.trim();
 
-  // empty check -> empty state, stop (if either .value is "" set empty state, put --- in output, clear error text and return to stop)
-  if (valueOneInput.value === "" || valueTwoInput.value === "") {
+  // empty check -> empty state, stop 
+  if (text === "") {
     resultOutput.value = "---";
     errorParagraph.textContent = "";
     app.dataset.state = "empty";
     return;
   }
 
-  // build calc (convert with number(valueOneInput.value)... op: operatorSelect.value as Operator
-  const calc: Calculation = { valueOne, valueTwo, op };
+  const tokens = tokenize(text);
+  if (typeof tokens === "string") {
+    resultOutput.value = "---";
+    errorParagraph.textContent = tokens;
+    app.dataset.state = "error";
+    return;
+  }
+
+  const [first, second, third] = tokens;
+  if (
+    tokens.length !== 3 ||
+    first.kind !== "number" ||
+    second.kind !== "operator" ||
+    third.kind !== "number"
+  ) {
+    resultOutput.value = "---";
+    errorParagraph.textContent = "Expression must be in the form: number operator number.";
+    app.dataset.state = "error";
+    return;
+  }
+
+  // build calc 
+  const calc: Calculation = { valueOne: first.value, op: second.value, valueTwo: third.value };
   // validate -> error state, stop (const error = validate(calc)
   const error = validate(calc);
   if (error !== null) {
@@ -100,14 +191,12 @@ const update = (): void => {
 
   // calc -> valid state, show result
   const result = calculate(calc);
-  resultOutput.value = `${valueOne} ${result.op} ${valueTwo} = ${result.value}`;
+  resultOutput.value = `${first.value} ${toSymbol(result.op)} ${third.value} = ${result.value}`;
   errorParagraph.textContent = "";
   app.dataset.state = "valid";
 };
 
-valueOneInput.addEventListener("input", update);
-valueTwoInput.addEventListener("input", update);
-operatorSelect.addEventListener("change", update);
+expressionInput.addEventListener("input", update);
 
 // 7. DOM — initial update
 update();

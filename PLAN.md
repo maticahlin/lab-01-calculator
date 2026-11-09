@@ -9,12 +9,18 @@ A simple calculator with a visual response depending on the state and operator p
 
 ## Scope
 
-- In: two numbers (a, b) + one operator (+ − × ÷)
-- Out: chaining, brackets, memory (maybe chaining)
+- In: two numbers (a, b) + one operator (+ − × ÷) all inserted in one text bracket that is invisible, input gets converted and drawn on the screen.
+- Out: chaining, brackets, memory
 
 ## Data (types)
 
-- `Operator` = "+" | "-" | "*" | "/"
+- `Operator` = 
+| User types | Stored as (Operator)| Displayed as|
+| ----- | ----- | ----- |
+| + | "+"" | + |
+| - | "-"" | - |
+| * x X × | "*" | × |
+| / ÷ | "/" | ÷ |
 - `Calculation` = { valueOne: number; valueTwo: number; op: Operator }
 - `CalcResult` = { op: Operator; value: number }
 

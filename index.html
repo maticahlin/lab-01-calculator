@@ -8,17 +8,8 @@
   </head>
   <body>
     <div id="app">
-      <label for="valueOne" class="desc">First number</label
-      ><input type="number" id="valueOne" placeholder="Enter a number" />
-      <label for="valueTwo" class="desc">Second number</label
-      ><input type="number" id="valueTwo" placeholder="Enter a number" />
-      <label for="operator" class="desc">Operator</label
-      ><select id="operator">
-        <option value="+">+</option>
-        <option value="-">-</option>
-        <option value="*">*</option>
-        <option value="/">/</option>
-      </select>
+      <label for="expression">Expression:</label>
+      <input id="expression" type="text" autofocus >
       <output id="result" aria-live="polite">---</output>
       <p id="error"></p>
     </div>
