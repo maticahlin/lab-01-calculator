@@ -140,6 +140,11 @@ function calculate(calc: Calculation): CalcResult {
 }
 
 // 4. GRID
+const CELL_W = 8;
+const CELL_H = 16;
+const FONT_PX = 12;
+const MONO = '"ABC Areal Mono", ui-monospace, monospace';
+
 function createGrid(cols: number, rows: number, fg: string): Grid {
   return {
     cols,
@@ -185,8 +190,45 @@ const expressionInput = document.querySelector<HTMLInputElement>("#expression");
 const resultOutput = document.querySelector<HTMLOutputElement>("#result");
 const errorParagraph = document.querySelector<HTMLParagraphElement>("#error");
 
-if (!expressionInput || !resultOutput || !errorParagraph) {
+const stage = document.querySelector<HTMLCanvasElement>("#stage");
+const ctx = stage?.getContext("2d");
+
+if (!expressionInput || !resultOutput || !errorParagraph || !stage || !ctx) {
   throw new Error("Calculator elements not found in the DOM.");
+}
+
+// RENDER
+function resizeCanvas(
+  canvas: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D,
+) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+  ctx.scale(dpr, dpr);
+  return {
+    cols: Math.floor(window.innerWidth / CELL_W),
+    rows: Math.floor(window.innerHeight / CELL_H),
+  };
+}
+
+function drawGrid(ctx: CanvasRenderingContext2D, grid: Grid, bg: string): void {
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+
+  ctx.font = `${FONT_PX}px ${MONO}`;
+  ctx.textBaseline = "top";
+
+  for (let y = 0; y < grid.rows; y++) {
+    for (let x = 0; x < grid.cols; x++) {
+      const index = y * grid.cols + x;
+
+      if (grid.ch[index] === " ") continue; // Skip empty cells
+
+      ctx.fillStyle = grid.fg[index];
+      ctx.fillText(grid.ch[index], x * CELL_W, y * CELL_H);
+    }
+  }
 }
 
 // 6. DOM — on input: read → validate → calculate → show
@@ -217,6 +259,7 @@ const update = (): void => {
     third.kind !== "number"
   ) {
     resultOutput.value = "---";
+    errorParagraph.textContent = "";
     app.dataset.state = "empty";
     return;
   }
@@ -245,5 +288,25 @@ const update = (): void => {
 
 expressionInput.addEventListener("input", update);
 
+const render = (): void => {
+  const size = resizeCanvas(stage, ctx);
+  const grid = createGrid(size.cols, size.rows, "#000000");
+
+  setCell(grid, 0, 0, "H", "#FF0000");
+  setCell(grid, size.cols - 1, size.rows - 1, "E", "#0000FF");
+  setCell(
+    grid,
+    Math.floor(size.cols / 2),
+    Math.floor(size.rows / 2),
+    "C",
+    "#00FF00",
+  );
+
+  drawGrid(ctx, grid, "#FFFFFF");
+};
+
+window.addEventListener("resize", render);
+
 // 7. DOM — initial update
 update();
+render();
