@@ -70,8 +70,7 @@ function toSymbol(op: Operator): string {
 
 // 2.3 LOGIC - Tokenize expression into Calculation
 type Token =
-  | { kind: "number"; value: number }
-  | { kind: "operator"; value: Operator };
+  { kind: "number"; value: number } | { kind: "operator"; value: Operator };
 
 function tokenize(input: string): Token[] | string {
   const tokens: Token[] = [];
@@ -108,10 +107,9 @@ function tokenize(input: string): Token[] | string {
     // 4. unknown -> return error
     return `Unknown character: ${char}`;
   }
-  
+
   return tokens;
 }
-
 
 // 3. LOGIC — calculate(calc): CalcResult
 function calculate(calc: Calculation): CalcResult {
@@ -137,11 +135,7 @@ const expressionInput = document.querySelector<HTMLInputElement>("#expression");
 const resultOutput = document.querySelector<HTMLOutputElement>("#result");
 const errorParagraph = document.querySelector<HTMLParagraphElement>("#error");
 
-if (
-  !expressionInput ||
-  !resultOutput ||
-  !errorParagraph
-) {
+if (!expressionInput || !resultOutput || !errorParagraph) {
   throw new Error("Calculator elements not found in the DOM.");
 }
 
@@ -149,7 +143,7 @@ if (
 const update = (): void => {
   const text = expressionInput.value.trim();
 
-  // empty check -> empty state, stop 
+  // empty check -> empty state, stop
   if (text === "") {
     resultOutput.value = "---";
     errorParagraph.textContent = "";
@@ -173,13 +167,18 @@ const update = (): void => {
     third.kind !== "number"
   ) {
     resultOutput.value = "---";
-    errorParagraph.textContent = "Expression must be in the form: number operator number.";
+    errorParagraph.textContent =
+      "Expression must be in the form: number operator number.";
     app.dataset.state = "error";
     return;
   }
 
-  // build calc 
-  const calc: Calculation = { valueOne: first.value, op: second.value, valueTwo: third.value };
+  // build calc
+  const calc: Calculation = {
+    valueOne: first.value,
+    op: second.value,
+    valueTwo: third.value,
+  };
   // validate -> error state, stop (const error = validate(calc)
   const error = validate(calc);
   if (error !== null) {
