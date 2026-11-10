@@ -17,7 +17,16 @@ type CalcResult = {
   op: Operator;
 };
 
+type Grid = {
+  cols: number;
+  rows: number;
+  ch: string[];
+  fg: string[];
+};
+
+// ++++++++++
 // 2. LOGIC — validate(calc): string | null
+// ++++++++++
 function validate(calc: Calculation): string | null {
   if (Number.isNaN(calc.valueOne) || Number.isNaN(calc.valueTwo)) {
     return "Both values must be numbers.";
@@ -62,9 +71,10 @@ function toSymbol(op: Operator): string {
       return "×";
     case "/":
       return "÷";
-    default:
+    default: {
       const check: never = op;
       throw new Error(`Unknown operator: ${check}`);
+    }
   }
 }
 
@@ -122,15 +132,55 @@ function calculate(calc: Calculation): CalcResult {
       return { value: calc.valueOne * calc.valueTwo, op: calc.op };
     case "/":
       return { value: calc.valueOne / calc.valueTwo, op: calc.op };
-    default:
+    default: {
       const check: never = calc.op;
       throw new Error(`Unknown operator: ${check}`);
+    }
   }
 }
 
-// 4. TESTS — console.log a few cases (delete later)
+// 4. GRID
+function createGrid(cols: number, rows: number, fg: string): Grid {
+  return {
+    cols,
+    rows,
+    ch: new Array(cols * rows).fill(" "),
+    fg: new Array(cols * rows).fill(fg),
+  };
+}
 
+function setCell(
+  grid: Grid,
+  x: number,
+  y: number,
+  ch: string,
+  fg: string,
+): void {
+  if (x < 0 || x >= grid.cols || y < 0 || y >= grid.rows) {
+    return; // Out of bounds, do nothing
+  }
+  const index = y * grid.cols + x;
+  grid.ch[index] = ch;
+  grid.fg[index] = fg;
+}
+
+function gridToText(grid: Grid): string {
+  let text = "";
+  for (let y = 0; y < grid.rows; y++) {
+    for (let x = 0; x < grid.cols; x++) {
+      const index = y * grid.cols + x;
+      text += grid.ch[index];
+    }
+    if (y < grid.rows - 1) {
+      text += "\n"; // Add newline except for the last row
+    }
+  }
+  return text;
+}
+
+// +++++++++
 // 5. DOM — grab elements, null checks
+// +++++++++
 const expressionInput = document.querySelector<HTMLInputElement>("#expression");
 const resultOutput = document.querySelector<HTMLOutputElement>("#result");
 const errorParagraph = document.querySelector<HTMLParagraphElement>("#error");
@@ -167,9 +217,7 @@ const update = (): void => {
     third.kind !== "number"
   ) {
     resultOutput.value = "---";
-    errorParagraph.textContent =
-      "Expression must be in the form: number operator number.";
-    app.dataset.state = "error";
+    app.dataset.state = "empty";
     return;
   }
 
