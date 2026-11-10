@@ -264,6 +264,73 @@ function toVisual(state: State, op: Operator | null, text: string): Visual {
   };
 }
 
+// ASCII RAMP - light to dark values
+const RAMP = " .:-=+*#%@";
+
+function inkToSymbol(coverage: number): string {
+  const index = Math.round(coverage * (RAMP.length - 1));
+  return RAMP[index];
+}
+
+//rasterize idea - draw -> invis canvas - read pixels > ink per cell (0-1) - RAMP -> symbols
+const DISPLAY = '"ABC Areal", system-ui, sans-serif';
+const FIT = 0.85;
+
+function rasterize(text: string, cols: number, rows: number): number[] {
+  const empty = new Array(cols * rows).fill(0);
+  if (text === "") return empty;
+
+  const width = cols * CELL_W;
+  const height = rows * CELL_H;
+
+  const off = document.createElement("canvas");
+  off.width = width;
+  off.height = height;
+  const octx = off.getContext("2d", { willReadFrequently: true });
+  if (!octx) return empty;
+
+  // measure at known size then scale
+  octx.font = `100px ${DISPLAY}`;
+  const widthAt100 = octx.measureText(text).width;
+  const size = Math.min((width * FIT * 100) / widthAt100, height * FIT);
+
+  // draw centered
+  octx.font = `${size}px ${DISPLAY}`;
+  octx.textAlign = "center";
+  octx.textBaseline = "middle";
+  octx.fillStyle = "#000";
+  octx.fillText(text, width / 2, height / 2);
+
+  const pixels = octx.getImageData(0, 0, width, height).data;
+
+  const coverage: number[] = [];
+
+  for (let cy = 0; cy < rows; cy++) {
+    for (let cx = 0; cx < cols; cx++) {
+      let sum = 0;
+      for (let px = 0; px < CELL_W; px++) {
+        for (let py = 0; py < CELL_H; py++) {
+          const pixelX = cx * CELL_W + px;
+          const pixelY = cy * CELL_H + py;
+          sum += pixels[(pixelY * width + pixelX) * 4 + 3];
+        }
+      }
+      coverage.push(sum / (CELL_W * CELL_H * 255));
+    }
+  }
+  return coverage;
+}
+
+function stampCoverage(grid: Grid, coverage: number[], color: string): void {
+  for (let i = 0; i < coverage.length; i++) {
+    const symbol = inkToSymbol(coverage[i]);
+    if (symbol !== " ") {
+      grid.ch[i] = symbol;
+      grid.fg[i] = color;
+    }
+  }
+}
+
 // +++++++++
 // 5. DOM — grab elements, null checks
 // +++++++++
@@ -401,9 +468,17 @@ const render = (): void => {
     fillField(grid, visual.op, visual.field);
   }
 
-  const x = Math.floor((grid.cols - visual.text.length) / 2);
-  const y = Math.floor(grid.rows / 2);
-  writeText(grid, x, y, visual.text, visual.ink);
+  if (visual.state === "error") {
+    const x = Math.floor((grid.cols - visual.text.length) / 2);
+    const y = Math.floor(grid.rows / 2);
+    writeText(grid, x, y, visual.text, visual.ink);
+  } else {
+    stampCoverage(
+      grid,
+      rasterize(visual.text, grid.cols, grid.rows),
+      visual.ink,
+    );
+  }
 
   drawGrid(ctx, grid, visual.bg);
 };
@@ -412,8 +487,13 @@ window.addEventListener("resize", render);
 
 // 7. DOM — initial update
 update();
+document.fonts.ready.then(render);
 
 document.addEventListener("pointerdown", (event) => {
   event.preventDefault();
   expressionInput.focus();
 });
+
+console.log(JSON.stringify(inkToSymbol(0)));
+console.log(inkToSymbol(0.5));
+console.log(inkToSymbol(1));
