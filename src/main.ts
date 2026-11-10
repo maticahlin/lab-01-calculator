@@ -5,6 +5,7 @@ if (!app) throw new Error("#app element not found");
 
 // 1. TYPES — Operator, Calculation, CalcResult
 type Operator = "+" | "-" | "*" | "/";
+type State = "empty" | "error" | "valid";
 
 type Calculation = {
   valueOne: number;
@@ -22,6 +23,15 @@ type Grid = {
   rows: number;
   ch: string[];
   fg: string[];
+};
+
+type Visual = {
+  state: State;
+  op: Operator | null; // null when no op
+  bg: string; // bg color
+  field: string; // pattern color
+  ink: string; // text color
+  text: string; // what to write in the output field
 };
 
 // ++++++++++
@@ -143,6 +153,24 @@ function calculate(calc: Calculation): CalcResult {
 const CELL_W = 8;
 const CELL_H = 16;
 const FONT_PX = 12;
+
+const SPACE_X = 6;
+const SPACE_Y = 3;
+
+/*-- COLOR THEME --*/
+const RED = "#f10505";
+const YELLOW = "#fff200";
+const BLUE = "#0000ff";
+const WHITE = "#ffffff";
+const BLACK = "#000000";
+
+const THEME: Record<Operator, { bg: string; field: string; ink: string }> = {
+  "+": { bg: RED, field: YELLOW, ink: WHITE },
+  "-": { bg: BLUE, field: WHITE, ink: BLACK },
+  "*": { bg: YELLOW, field: BLUE, ink: BLACK },
+  "/": { bg: WHITE, field: RED, ink: BLACK },
+};
+
 const MONO = '"ABC Areal Mono", ui-monospace, monospace';
 
 function createGrid(cols: number, rows: number, fg: string): Grid {
@@ -169,18 +197,71 @@ function setCell(
   grid.fg[index] = fg;
 }
 
-function gridToText(grid: Grid): string {
-  let text = "";
-  for (let y = 0; y < grid.rows; y++) {
-    for (let x = 0; x < grid.cols; x++) {
-      const index = y * grid.cols + x;
-      text += grid.ch[index];
+function fieldSymbol(op: Operator, x: number, y: number): string {
+  switch (op) {
+    case "+":
+      return x % SPACE_X === 0 && y % SPACE_Y === 0 ? "+" : " ";
+    case "-":
+      return y % SPACE_Y === 0 ? "-" : " ";
+    case "*": {
+      const row = Math.floor(y / SPACE_Y);
+      const shift = row % 2 === 0 ? 0 : Math.floor(SPACE_X / 2);
+      return y % SPACE_Y === 0 && (x + shift) % SPACE_X === 0 ? "×" : " ";
     }
-    if (y < grid.rows - 1) {
-      text += "\n"; // Add newline except for the last row
+    case "/":
+      return (x + y) % SPACE_X === 0 ? "/" : " ";
+
+    default: {
+      const check: never = op;
+      throw new Error(`Unknown operator: ${check}`);
     }
   }
-  return text;
+}
+
+function fillField(grid: Grid, op: Operator, color: string): void {
+  for (let y = 0; y < grid.rows; y++) {
+    for (let x = 0; x < grid.cols; x++) {
+      const symbol = fieldSymbol(op, x, y);
+      if (symbol !== " ") {
+        setCell(grid, x, y, symbol, color);
+      }
+    }
+  }
+}
+
+function toVisual(state: State, op: Operator | null, text: string): Visual {
+  // error
+  if (state === "error") {
+    return {
+      state,
+      op: null,
+      bg: RED,
+      field: BLACK,
+      ink: WHITE,
+      text,
+    };
+  }
+  // valid
+  if (state === "valid" && op !== null) {
+    const theme = THEME[op];
+    return {
+      state,
+      op,
+      bg: theme.bg,
+      field: theme.field,
+      ink: theme.ink,
+      text,
+    };
+  }
+  // empty
+  return {
+    state: "empty",
+    op: null,
+    bg: WHITE,
+    field: BLACK,
+    ink: BLUE,
+    text: "CALC",
+  };
 }
 
 // +++++++++
@@ -232,6 +313,8 @@ function drawGrid(ctx: CanvasRenderingContext2D, grid: Grid, bg: string): void {
 }
 
 // 6. DOM — on input: read → validate → calculate → show
+let visual: Visual = toVisual("empty", null, "");
+
 const update = (): void => {
   const text = expressionInput.value.trim();
 
@@ -240,6 +323,8 @@ const update = (): void => {
     resultOutput.value = "---";
     errorParagraph.textContent = "";
     app.dataset.state = "empty";
+    visual = toVisual("empty", null, "");
+    render();
     return;
   }
 
@@ -248,6 +333,8 @@ const update = (): void => {
     resultOutput.value = "---";
     errorParagraph.textContent = tokens;
     app.dataset.state = "error";
+    visual = toVisual("error", null, tokens);
+    render();
     return;
   }
 
@@ -261,6 +348,8 @@ const update = (): void => {
     resultOutput.value = "---";
     errorParagraph.textContent = "";
     app.dataset.state = "empty";
+    visual = toVisual("empty", null, "");
+    render();
     return;
   }
 
@@ -276,6 +365,8 @@ const update = (): void => {
     resultOutput.value = "---";
     errorParagraph.textContent = error;
     app.dataset.state = "error";
+    visual = toVisual("error", null, error);
+    render();
     return;
   }
 
@@ -284,29 +375,45 @@ const update = (): void => {
   resultOutput.value = `${first.value} ${toSymbol(result.op)} ${third.value} = ${result.value}`;
   errorParagraph.textContent = "";
   app.dataset.state = "valid";
+  visual = toVisual("valid", result.op, String(result.value));
+  render();
 };
 
 expressionInput.addEventListener("input", update);
 
+function writeText(
+  grid: Grid,
+  x: number,
+  y: number,
+  text: string,
+  color: string,
+): void {
+  for (let i = 0; i < text.length; i++) {
+    setCell(grid, x + i, y, text[i], color);
+  }
+}
+
 const render = (): void => {
   const size = resizeCanvas(stage, ctx);
-  const grid = createGrid(size.cols, size.rows, "#000000");
+  const grid = createGrid(size.cols, size.rows, visual.ink);
 
-  setCell(grid, 0, 0, "H", "#FF0000");
-  setCell(grid, size.cols - 1, size.rows - 1, "E", "#0000FF");
-  setCell(
-    grid,
-    Math.floor(size.cols / 2),
-    Math.floor(size.rows / 2),
-    "C",
-    "#00FF00",
-  );
+  if (visual.op !== null) {
+    fillField(grid, visual.op, visual.field);
+  }
 
-  drawGrid(ctx, grid, "#FFFFFF");
+  const x = Math.floor((grid.cols - visual.text.length) / 2);
+  const y = Math.floor(grid.rows / 2);
+  writeText(grid, x, y, visual.text, visual.ink);
+
+  drawGrid(ctx, grid, visual.bg);
 };
 
 window.addEventListener("resize", render);
 
 // 7. DOM — initial update
 update();
-render();
+
+document.addEventListener("pointerdown", (event) => {
+  event.preventDefault();
+  expressionInput.focus();
+});
