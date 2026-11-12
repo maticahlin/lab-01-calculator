@@ -9,10 +9,17 @@
   <body>
     <div id="app">
       <canvas id="stage" aria-hidden="true"></canvas>
-      <label for="expression">Expression:</label>
-      <input id="expression" type="text" autofocus />
-      <output id="result" aria-live="polite">---</output>
-      <p id="error"></p>
+      <label for="expression" class="visually-hidden">Type a sum, for example 12 × 4</label>
+      <input
+        id="expression"
+        class="visually-hidden"
+        type="text"
+        autocomplete="off"
+        spellcheck="false"
+        autofocus
+      />
+      <output id="result" class="visually-hidden" aria-live="polite">---</output>
+      <p id="error" class="visually-hidden" role="alert"></p>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

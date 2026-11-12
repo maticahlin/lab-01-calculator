@@ -32,6 +32,7 @@ type Visual = {
   field: string; // pattern color
   ink: string; // text color
   text: string; // what to write in the output field
+  caption: string;
 };
 
 // ++++++++++
@@ -229,7 +230,12 @@ function fillField(grid: Grid, op: Operator, color: string): void {
   }
 }
 
-function toVisual(state: State, op: Operator | null, text: string): Visual {
+function toVisual(
+  state: State,
+  op: Operator | null,
+  text: string,
+  caption: string,
+): Visual {
   // error
   if (state === "error") {
     return {
@@ -239,6 +245,7 @@ function toVisual(state: State, op: Operator | null, text: string): Visual {
       field: BLACK,
       ink: WHITE,
       text,
+      caption,
     };
   }
   // valid
@@ -251,6 +258,7 @@ function toVisual(state: State, op: Operator | null, text: string): Visual {
       field: theme.field,
       ink: theme.ink,
       text,
+      caption,
     };
   }
   // empty
@@ -260,12 +268,13 @@ function toVisual(state: State, op: Operator | null, text: string): Visual {
     bg: WHITE,
     field: BLACK,
     ink: BLUE,
-    text: "CALC",
+    text: text === "" ? "CALC" : text,
+    caption,
   };
 }
 
 // ASCII RAMP - light to dark values
-const RAMP = " .:-=+*#%@";
+const RAMP = " ~≈≋▒";
 
 function inkToSymbol(coverage: number): string {
   const index = Math.round(coverage * (RAMP.length - 1));
@@ -380,7 +389,11 @@ function drawGrid(ctx: CanvasRenderingContext2D, grid: Grid, bg: string): void {
 }
 
 // 6. DOM — on input: read → validate → calculate → show
-let visual: Visual = toVisual("empty", null, "");
+// Caption: small line, bottom-left. Hint when nothing is calculated yet.
+const HINT = "TYPE A SUM — 12 × 4";
+const CAPTION_ROWS = 3; // kept free at the bottom for the caption
+
+let visual: Visual = toVisual("empty", null, "", HINT);
 
 const update = (): void => {
   const text = expressionInput.value.trim();
@@ -390,7 +403,7 @@ const update = (): void => {
     resultOutput.value = "---";
     errorParagraph.textContent = "";
     app.dataset.state = "empty";
-    visual = toVisual("empty", null, "");
+    visual = toVisual("empty", null, "", HINT);
     render();
     return;
   }
@@ -400,7 +413,7 @@ const update = (): void => {
     resultOutput.value = "---";
     errorParagraph.textContent = tokens;
     app.dataset.state = "error";
-    visual = toVisual("error", null, tokens);
+    visual = toVisual("error", null, tokens, text);
     render();
     return;
   }
@@ -415,7 +428,7 @@ const update = (): void => {
     resultOutput.value = "---";
     errorParagraph.textContent = "";
     app.dataset.state = "empty";
-    visual = toVisual("empty", null, "");
+    visual = toVisual("empty", null, text, HINT); // still typing: show it big
     render();
     return;
   }
@@ -426,13 +439,13 @@ const update = (): void => {
     op: second.value,
     valueTwo: third.value,
   };
-  // validate -> error state, stop (const error = validate(calc)
+  // validate -> error state
   const error = validate(calc);
   if (error !== null) {
     resultOutput.value = "---";
     errorParagraph.textContent = error;
     app.dataset.state = "error";
-    visual = toVisual("error", null, error);
+    visual = toVisual("error", null, error, text);
     render();
     return;
   }
@@ -442,7 +455,12 @@ const update = (): void => {
   resultOutput.value = `${first.value} ${toSymbol(result.op)} ${third.value} = ${result.value}`;
   errorParagraph.textContent = "";
   app.dataset.state = "valid";
-  visual = toVisual("valid", result.op, String(result.value));
+  visual = toVisual(
+    "valid",
+    result.op,
+    String(result.value),
+    `${first.value} ${toSymbol(result.op)} ${third.value} =`,
+  );
   render();
 };
 
@@ -457,6 +475,13 @@ function writeText(
 ): void {
   for (let i = 0; i < text.length; i++) {
     setCell(grid, x + i, y, text[i], color);
+  }
+}
+
+// Blank one row so text on it reads against the field pattern.
+function clearRow(grid: Grid, y: number): void {
+  for (let x = 0; x < grid.cols; x++) {
+    setCell(grid, x, y, " ", grid.fg[0]);
   }
 }
 
@@ -475,10 +500,15 @@ const render = (): void => {
   } else {
     stampCoverage(
       grid,
-      rasterize(visual.text, grid.cols, grid.rows),
+      rasterize(visual.text, grid.cols, grid.rows - CAPTION_ROWS),
       visual.ink,
     );
   }
+
+  // caption: one clean row near the bottom, 2 cells from the left edge
+  const captionY = grid.rows - 2;
+  clearRow(grid, captionY);
+  writeText(grid, 2, captionY, visual.caption, visual.ink);
 
   drawGrid(ctx, grid, visual.bg);
 };
@@ -493,7 +523,3 @@ document.addEventListener("pointerdown", (event) => {
   event.preventDefault();
   expressionInput.focus();
 });
-
-console.log(JSON.stringify(inkToSymbol(0)));
-console.log(inkToSymbol(0.5));
-console.log(inkToSymbol(1));
